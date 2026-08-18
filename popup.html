@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlurShield Privacy Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- HEADER -->
+    <header class="popup-header">
+      <div class="logo-group">
+        <div class="logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>BlurShield</h1>
+          <span class="version-tag">v1.0</span>
+        </div>
+      </div>
+      <div class="header-power-group" id="power-card">
+        <label class="switch-sm" title="Toggle BlurShield">
+          <input type="checkbox" id="master-switch" checked>
+          <span class="slider round"></span>
+        </label>
+      </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-target="tab-controls" role="tab" id="tab-btn-controls">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span>Controls</span>
+      </button>
+      <button class="nav-tab" data-target="tab-masks" role="tab" id="tab-btn-masks">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+        </svg>
+        <span id="tab-masks-title">Masks (0)</span>
+      </button>
+      <button class="nav-tab" data-target="tab-tools" role="tab" id="tab-btn-tools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: CONTROLS & APPLY -->
+    <div class="tab-panel active" id="tab-controls">
+
+      <!-- SECTION 1: ELEMENT MASKING (BLUR ONLY) -->
+      <div class="control-section-card">
+        <div class="section-card-header">
+          <div class="section-header-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <span>Element Blur</span>
+          </div>
+          <button class="btn-section-action" id="btn-pick-element">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="22" y1="12" x2="18" y2="12"></line>
+              <line x1="6" y1="12" x2="2" y2="12"></line>
+              <line x1="12" y1="6" x2="12" y2="2"></line>
+              <line x1="12" y1="22" x2="12" y2="18"></line>
+            </svg>
+            <span>Pick Element</span>
+          </button>
+        </div>
+
+        <!-- Element Blur Radius -->
+        <div class="setting-row" id="blur-intensity-row">
+          <div class="setting-label-group">
+            <span class="setting-label">Blur Radius</span>
+            <span class="range-val" id="blur-val-text">8px</span>
+          </div>
+          <input type="range" id="blur-slider" min="3" max="25" value="8" class="range-slider">
+        </div>
+      </div>
+
+      <!-- SECTION 2: TEXT PHRASE MASKING -->
+      <div class="control-section-card">
+        <div class="section-card-header">
+          <div class="section-header-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 7 4 4 20 4 20 7"></polyline>
+              <line x1="9" y1="20" x2="15" y2="20"></line>
+              <line x1="12" y1="4" x2="12" y2="20"></line>
+            </svg>
+            <span>Phrase Masking</span>
+          </div>
+          <button class="btn-section-action" id="btn-quick-text-toggle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add Phrase</span>
+          </button>
+        </div>
+
+        <!-- Add Text Input Panel -->
+        <div class="text-mask-input-panel" id="text-mask-input-panel" style="display: none;">
+          <div class="input-with-button">
+            <input type="text" id="manual-text-input" placeholder="Enter phrase..." />
+            <button class="btn-sm-add" id="btn-add-text-mask">Mask</button>
+          </div>
+        </div>
+
+        <!-- Character Presets & 1-to-1 Masking -->
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <span class="setting-label">Mask Character</span>
+            <span class="setting-subtext">Each letter ➔ <strong id="preview-sample">***</strong></span>
+          </div>
+          <div class="char-preset-group" id="char-preset-group">
+            <button class="char-btn active" data-char="*">*</button>
+            <button class="char-btn" data-char="#">#</button>
+            <button class="char-btn" data-char="$">$</button>
+            <input type="text" id="custom-char-input" class="custom-char-box" placeholder="?" maxlength="2" title="Type custom character">
+          </div>
+        </div>
+
+        <!-- Phrase Character Color Presets (#fff, #000, #38bdf8 / Picker) -->
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <span class="setting-label">Character Color</span>
+            <span class="setting-subtext">White, black, or custom</span>
+          </div>
+          <div class="color-preset-group" id="phrase-color-group">
+            <button class="color-dot" data-color="#ffffff" title="White" style="background: #ffffff; border-color: rgba(0,0,0,0.3);"></button>
+            <button class="color-dot active" data-color="#000000" title="Black" style="background: #000000; border-color: rgba(255,255,255,0.3);"></button>
+            <label class="color-picker-label" id="phrase-color-picker-label" title="Custom Accent Color (Click to Pick)" style="background: #38bdf8;">
+              <input type="color" id="phrase-color-picker" value="#38bdf8" class="color-picker-input">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: GENERAL SETTINGS -->
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <span class="setting-label">Hover to Reveal</span>
+            <span class="setting-subtext">Temporarily unmask on mouse hover</span>
+          </div>
+          <label class="switch-sm">
+            <input type="checkbox" id="hover-reveal-switch">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SITE MASKS / HISTORY -->
+    <div class="tab-panel" id="tab-masks">
+      <div class="rules-section">
+        <div class="rules-header">
+          <span class="rules-title">Masks on this Site (<span id="rule-count">0</span>)</span>
+          <button class="btn-text-danger" id="btn-clear-site" title="Remove all blurs for this domain">Clear All</button>
+        </div>
+
+        <div class="rules-list" id="rules-list">
+          <!-- Dynamically rendered -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SETTINGS & TOOLS -->
+    <div class="tab-panel" id="tab-tools">
+      <div class="tools-card-list">
+        <!-- Support / Donate Card -->
+        <div class="tool-card" id="card-donate">
+          <div class="tool-icon donate-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+          <div class="tool-content">
+            <h4>Support Project</h4>
+            <p>Help keep BlurShield free and maintained</p>
+          </div>
+          <button class="btn-tool-action btn-donate-action" id="btn-donate">Donate</button>
+        </div>
+
+        <!-- Export Rules -->
+        <div class="tool-card">
+          <div class="tool-icon export-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </div>
+          <div class="tool-content">
+            <h4>Export Rules</h4>
+            <p>Backup all domain blur rules as a JSON file</p>
+          </div>
+          <button class="btn-tool-action" id="btn-export-rules">Export</button>
+        </div>
+
+        <!-- Import Rules -->
+        <div class="tool-card">
+          <div class="tool-icon import-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div class="tool-content">
+            <h4>Import Rules</h4>
+            <p>Restore or load saved rules from JSON</p>
+          </div>
+          <button class="btn-tool-action" id="btn-import-rules">Import</button>
+        </div>
+      </div>
+
+      <input type="file" id="file-import" accept=".json" style="display: none;">
+
+      <!-- Quick Info / Status -->
+      <div class="about-card">
+        <div class="about-row">
+          <span>Storage Engine</span>
+          <span class="text-highlight">chrome.storage.local</span>
+        </div>
+        <div class="about-row">
+          <span>SPA Support</span>
+          <span class="text-highlight">MutationObserver Active</span>
+        </div>
+        <div class="about-row">
+          <span>FOUC Prevention</span>
+          <span class="text-highlight">document_start Injection</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div class="modal-overlay" id="confirm-modal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-icon-wrapper">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </div>
+        <h3 class="modal-title">Clear Site Masks?</h3>
+        <p class="modal-message" id="confirm-modal-message">This will remove all masks for this website and automatically refresh the page.</p>
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="btn-modal-cancel">Cancel</button>
+          <button class="btn-modal-danger" id="btn-modal-confirm">Clear & Refresh</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Notification Toast -->
+    <div class="toast-notification" id="toast-notification" style="display: none;">
+      <span class="toast-icon">✓</span>
+      <span class="toast-text" id="toast-text">Rules imported successfully!</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
