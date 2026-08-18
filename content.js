@@ -416,29 +416,133 @@
     return true;
   }
 
-  function generateSelector(element) {
-    if (!(element instanceof Element)) return null;
+  function isUniqueSelector(selector, targetElement) {
+    if (!selector) return false;
+    try {
+      const matches = document.querySelectorAll(selector);
+      return matches.length === 1 && (!targetElement || matches[0] === targetElement);
+    } catch (e) {
+      return false;
+    }
+  }
 
+  function getUniqueAttributeSelector(element) {
+    if (!(element instanceof Element)) return null;
+    const tag = element.tagName.toLowerCase();
+
+    // 1. Check ID only if truly unique in DOM
     if (element.id && isCleanId(element.id)) {
-      return `#${CSS.escape(element.id)}`;
+      const idSel = `#${CSS.escape(element.id)}`;
+      if (isUniqueSelector(idSel, element)) return idSel;
     }
 
-    const testAttrs = ['data-testid', 'data-qa', 'data-cy', 'data-automation-id', 'data-id', 'aria-label', 'name'];
+    // 2. Check semantic & testing data attributes
+    const testAttrs = [
+      'data-testid', 'data-qa', 'data-cy', 'data-automation-id', 'data-id',
+      'data-item-id', 'data-asin', 'data-video-id', 'data-tweet-id', 'data-post-id',
+      'data-row-id', 'data-entry-id', 'data-key', 'name', 'aria-label', 'title'
+    ];
+
     for (const attr of testAttrs) {
       const val = element.getAttribute(attr);
-      if (val && val.trim().length > 0 && val.length < 50 && !RANDOM_ID_REGEX.test(val)) {
-        return `${element.tagName.toLowerCase()}[${attr}="${CSS.escape(val)}"]`;
+      if (val && val.trim().length > 0 && val.length < 80 && !RANDOM_ID_REGEX.test(val)) {
+        const attrSel = `${tag}[${attr}="${CSS.escape(val)}"]`;
+        if (isUniqueSelector(attrSel, element)) return attrSel;
       }
     }
 
+    // 3. Check unique href / link target (essential for video cards, articles, social posts)
+    if (element.hasAttribute('href')) {
+      const href = element.getAttribute('href');
+      if (href && href.length > 3 && href.length < 120 && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        const hrefSel = `${tag}[href="${CSS.escape(href)}"]`;
+        if (isUniqueSelector(hrefSel, element)) return hrefSel;
+      }
+    }
+
+    return null;
+  }
+
+  function generateSelector(element) {
+    if (!(element instanceof Element)) return null;
+
+    // Step 1: Check if element itself has a 100% unique selector
+    const directUnique = getUniqueAttributeSelector(element);
+    if (directUnique) return directUnique;
+
+    // Step 2: Check clean class names on element if unique
     const cleanClasses = Array.from(element.classList || []).filter(isCleanClass);
     if (cleanClasses.length > 0) {
       const classSelector = `${element.tagName.toLowerCase()}.${cleanClasses.slice(0, 2).map(c => CSS.escape(c)).join('.')}`;
-      if (document.querySelectorAll(classSelector).length === 1) {
+      if (isUniqueSelector(classSelector, element)) {
         return classSelector;
       }
     }
 
+    // Step 3: Check if element is or is inside a repeating card (YouTube video, tweet, Reddit post, product card)
+    // and can be uniquely anchored using CSS :has() with a unique child link/attribute
+    let ancestor = element;
+    let depth = 0;
+    while (ancestor && ancestor !== document.body && depth < 7) {
+      const uniqueChildLink = ancestor.querySelector('a[href*="watch?v="], a[href*="/shorts/"], a[href*="/status/"], a[href*="/comments/"], a[href*="/dp/"], a[href*="/p/"], a[href*="/item?"]');
+      if (uniqueChildLink && uniqueChildLink.getAttribute('href')) {
+        const hrefVal = uniqueChildLink.getAttribute('href');
+        const cardTag = ancestor.tagName.toLowerCase();
+        const hasCardSelector = `${cardTag}:has(a[href="${CSS.escape(hrefVal)}"])`;
+        
+        // 3a. Target the entire card / video item
+        if (ancestor === element && isUniqueSelector(hasCardSelector, element)) {
+          return hasCardSelector;
+        }
+
+        // 3b. Target a specific sub-component (e.g. Thumbnail, Title, Avatar, Price) inside the card
+        if (ancestor !== element) {
+          const targetTag = element.tagName.toLowerCase();
+
+          // Try clean semantic child selector first (e.g., "ytd-thumbnail", "img", "#video-title", "a#thumbnail")
+          const cleanSubSelectors = [];
+          if (element.id && isCleanId(element.id)) {
+            cleanSubSelectors.push(`${hasCardSelector} #${CSS.escape(element.id)}`);
+          }
+          cleanSubSelectors.push(`${hasCardSelector} ${targetTag}`);
+          const cleanElemClasses = Array.from(element.classList || []).filter(isCleanClass);
+          if (cleanElemClasses.length > 0) {
+            cleanSubSelectors.push(`${hasCardSelector} ${targetTag}.${cleanElemClasses[0]}`);
+          }
+
+          for (const subSel of cleanSubSelectors) {
+            if (isUniqueSelector(subSel, element)) {
+              return subSel;
+            }
+          }
+
+          // Direct child combinator path from the unique card to target element
+          const subPath = [];
+          let currSub = element;
+          while (currSub && currSub !== ancestor) {
+            let seg = currSub.tagName.toLowerCase();
+            const parent = currSub.parentElement;
+            if (parent) {
+              const siblings = Array.from(parent.children).filter(el => el.tagName === currSub.tagName);
+              if (siblings.length > 1) {
+                const index = siblings.indexOf(currSub) + 1;
+                seg += `:nth-of-type(${index})`;
+              }
+            }
+            subPath.unshift(seg);
+            currSub = currSub.parentElement;
+          }
+          const fullHasSelector = `${hasCardSelector} > ${subPath.join(' > ')}`;
+          if (isUniqueSelector(fullHasSelector, element)) {
+            return fullHasSelector;
+          }
+        }
+      }
+      ancestor = ancestor.parentElement;
+      depth++;
+    }
+
+    // Step 4: Robust Hierarchical Path climbing with :nth-of-type indexing
     const path = [];
     let curr = element;
 
@@ -450,9 +554,28 @@
 
       let segment = curr.tagName.toLowerCase();
 
+      // Check if current ancestor has a unique ID in DOM
       if (curr.id && isCleanId(curr.id)) {
-        segment += `#${CSS.escape(curr.id)}`;
-        path.unshift(segment);
+        const idSel = `#${CSS.escape(curr.id)}`;
+        if (isUniqueSelector(idSel, curr)) {
+          segment = idSel;
+          path.unshift(segment);
+          const candidate = path.join(' > ');
+          if (isUniqueSelector(candidate, element)) {
+            return candidate;
+          }
+          break;
+        }
+      }
+
+      // Check if current ancestor has a unique data/href attribute
+      const ancestorUnique = getUniqueAttributeSelector(curr);
+      if (ancestorUnique && isUniqueSelector(ancestorUnique, curr)) {
+        path.unshift(ancestorUnique);
+        const candidate = path.join(' > ');
+        if (isUniqueSelector(candidate, element)) {
+          return candidate;
+        }
         break;
       }
 
@@ -471,9 +594,14 @@
       }
 
       path.unshift(segment);
-      curr = curr.parentElement;
 
-      if (path.length >= 4) break;
+      // Verify if current selector path is already 100% unique
+      const testPath = path.join(' > ');
+      if (isUniqueSelector(testPath, element)) {
+        return testPath;
+      }
+
+      curr = curr.parentElement;
     }
 
     return path.join(' > ');
@@ -601,10 +729,100 @@
 
   let lastContextMenuTarget = null;
 
-  // Track the element that was right-clicked for context menu actions
+  // Find whether an element is currently masked by an element rule or phrase rule
+  function findMaskedRuleForElement(el) {
+    if (!el || isExtensionElement(el)) return null;
+
+    // 1. Direct rule ID or class on element / ancestor
+    const maskedContainer = el.closest ? el.closest('.blurshield-masked-element, [data-blurshield-id]') : null;
+    if (maskedContainer) {
+      const ruleId = maskedContainer.getAttribute('data-blurshield-id');
+      if (ruleId) {
+        const found = currentRules.find(r => r.id === ruleId);
+        if (found) return found;
+      }
+      return { type: 'element', element: maskedContainer };
+    }
+
+    // 2. Text phrase span
+    const textSpan = el.closest ? el.closest('.blurshield-text-phrase') : null;
+    if (textSpan) {
+      const orig = (textSpan.getAttribute('data-original-text') || textSpan.textContent || '').trim().toLowerCase();
+      const found = currentRules.find(r => r.type === 'text' && r.text && r.text.trim().toLowerCase() === orig);
+      if (found) return found;
+      return { type: 'text', text: orig };
+    }
+
+    // 3. Match against active selector rules
+    for (const rule of currentRules) {
+      if (rule.type === 'element' && rule.selector) {
+        try {
+          if (el.matches(rule.selector) || (el.closest && el.closest(rule.selector))) {
+            return rule;
+          }
+        } catch (e) {}
+      }
+    }
+
+    return null;
+  }
+
+  // Remove/unblur rule(s) matching an element or text
+  function removeRulesForElement(targetEl) {
+    if (!targetEl || isExtensionElement(targetEl)) return;
+
+    const maskedContainer = targetEl.closest ? targetEl.closest('.blurshield-masked-element, [data-blurshield-id]') : null;
+    const ruleId = maskedContainer ? maskedContainer.getAttribute('data-blurshield-id') : null;
+
+    const textSpan = targetEl.closest ? targetEl.closest('.blurshield-text-phrase') : null;
+    const textOriginal = textSpan ? (textSpan.getAttribute('data-original-text') || textSpan.textContent || '').trim().toLowerCase() : null;
+
+    chrome.storage.local.get(['blurshield_rules'], (result) => {
+      const allRules = result.blurshield_rules || {};
+      const hostRules = allRules[currentHost] || [];
+
+      const initialCount = hostRules.length;
+      const updatedRules = hostRules.filter(rule => {
+        if (ruleId && rule.id === ruleId) return false;
+        if (textOriginal && rule.type === 'text' && rule.text && rule.text.trim().toLowerCase() === textOriginal) return false;
+        if (rule.type === 'element' && rule.selector) {
+          try {
+            if (targetEl.matches(rule.selector) || (targetEl.closest && targetEl.closest(rule.selector))) {
+              return false;
+            }
+          } catch (e) {}
+        }
+        return true;
+      });
+
+      if (updatedRules.length < initialCount) {
+        allRules[currentHost] = updatedRules;
+        chrome.storage.local.set({ blurshield_rules: allRules }, () => {
+          currentRules = updatedRules;
+          applyAllRules();
+          notifyBadgeCount();
+        });
+      } else if (maskedContainer) {
+        // Fallback: If it had the class directly applied
+        maskedContainer.classList.remove('blurshield-masked-element', 'blurshield-hover-reveal');
+        maskedContainer.removeAttribute('data-blurshield-id');
+        maskedContainer.style.filter = '';
+      }
+    });
+  }
+
+  // Track the element that was right-clicked for context menu actions & update context menu title
   document.addEventListener('contextmenu', (e) => {
     if (!isExtensionElement(e.target)) {
       lastContextMenuTarget = e.target;
+      if (currentSettings.masterEnabled) {
+        const maskedRule = findMaskedRuleForElement(e.target);
+        chrome.runtime.sendMessage({
+          action: 'UPDATE_CONTEXT_MENU_TARGET',
+          isMasked: !!maskedRule,
+          maskType: maskedRule ? maskedRule.type : null
+        }).catch(() => {});
+      }
     }
   }, true);
 
@@ -668,17 +886,24 @@
 
       case 'BLUR_CLICKED_ELEMENT': {
         if (lastContextMenuTarget && !isExtensionElement(lastContextMenuTarget)) {
-          const selector = generateSelector(lastContextMenuTarget);
-          const label = getElementFriendlyName(lastContextMenuTarget);
-          if (selector) {
-            saveRule({
-              id: 'elem_' + Date.now(),
-              type: 'element',
-              selector: selector,
-              label: label,
-              createdAt: Date.now()
-            });
-            lastContextMenuTarget.classList.add('blurshield-masked-element');
+          const maskedRule = findMaskedRuleForElement(lastContextMenuTarget);
+          if (maskedRule) {
+            // Already masked! Unblur/remove mask instead of duplicating or stacking another blur
+            removeRulesForElement(lastContextMenuTarget);
+          } else {
+            // Not masked yet: generate selector and save blur rule
+            const selector = generateSelector(lastContextMenuTarget);
+            const label = getElementFriendlyName(lastContextMenuTarget);
+            if (selector) {
+              saveRule({
+                id: 'elem_' + Date.now(),
+                type: 'element',
+                selector: selector,
+                label: label,
+                createdAt: Date.now()
+              });
+              lastContextMenuTarget.classList.add('blurshield-masked-element');
+            }
           }
         }
         sendResponse({ success: true });

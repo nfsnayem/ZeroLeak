@@ -256,7 +256,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             chrome.tabs.sendMessage(activeTab.id, {
               action: 'HIGHLIGHT_RULE',
               selector: rule.selector
-            }).catch(() => {});
+            }, () => {
+              if (chrome.runtime.lastError) {
+                // Cleanly consume lastError if tab cannot receive messages
+              }
+            });
           }
         });
       }
@@ -282,7 +286,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tabs && tabs.length > 0) {
         tabs.forEach(tab => {
           if (tab && tab.id) {
-            chrome.tabs.sendMessage(tab.id, { action: 'STATE_CHANGED' }).catch(() => {});
+            chrome.tabs.sendMessage(tab.id, { action: 'STATE_CHANGED' }, () => {
+              if (chrome.runtime.lastError) {
+                // Cleanly consume lastError for system or unsupported tabs
+              }
+            });
           }
         });
       }
@@ -312,6 +320,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnPickElement.addEventListener('click', async () => {
     if (!activeTab || !activeTab.id) return;
     chrome.tabs.sendMessage(activeTab.id, { action: 'START_PICKER' }, () => {
+      if (chrome.runtime.lastError) {
+        // Tab does not allow content scripts (e.g. chrome:// or WebStore)
+      }
       window.close();
     });
   });
@@ -404,26 +415,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Phrase Character Color Picker (Clicking 3rd dot sets color & opens picker)
-  phraseColorPickerLabel.addEventListener('click', () => {
-    currentSettings.phraseColor = phraseColorPicker.value || '#38bdf8';
-    saveSettings();
-    try {
-      if (typeof phraseColorPicker.showPicker === 'function') {
-        phraseColorPicker.showPicker();
-      }
-    } catch (e) {}
-  });
-
+  // Phrase Character Color Picker (Native <input type="color"> handles open on click)
   phraseColorPicker.addEventListener('input', (e) => {
-    currentSettings.phraseColor = e.target.value;
-    phraseColorPickerLabel.style.background = e.target.value;
+    const val = e.target.value;
+    currentSettings.phraseColor = val;
+    phraseColorPickerLabel.style.background = val;
+    phraseColorDots.forEach(d => d.classList.remove('active'));
+    phraseColorPickerLabel.classList.add('active');
     saveSettings();
   });
 
   phraseColorPicker.addEventListener('change', (e) => {
-    currentSettings.phraseColor = e.target.value;
-    phraseColorPickerLabel.style.background = e.target.value;
+    const val = e.target.value;
+    currentSettings.phraseColor = val;
+    phraseColorPickerLabel.style.background = val;
+    phraseColorDots.forEach(d => d.classList.remove('active'));
+    phraseColorPickerLabel.classList.add('active');
     saveSettings();
   });
 
