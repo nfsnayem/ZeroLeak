@@ -596,67 +596,17 @@
   }
 
   // =========================================================================
-  // 8. Text Highlight Quick Action
+  // 8. Context Menu Target Tracking & Quick Actions
   // =========================================================================
 
-  document.addEventListener('mouseup', (e) => {
-    if (isPickerActive) return;
-    const selection = window.getSelection();
-    const text = selection ? selection.toString().trim() : '';
+  let lastContextMenuTarget = null;
 
-    if (text.length > 1 && !isExtensionElement(e.target)) {
-      showTextActionPopup(selection, text);
-    } else {
-      setTimeout(() => {
-        if (!window.getSelection()?.toString().trim()) {
-          removeTextActionPopup();
-        }
-      }, 100);
+  // Track the element that was right-clicked for context menu actions
+  document.addEventListener('contextmenu', (e) => {
+    if (!isExtensionElement(e.target)) {
+      lastContextMenuTarget = e.target;
     }
-  });
-
-  function showTextActionPopup(selection, text) {
-    removeTextActionPopup();
-    if (!selection.rangeCount) return;
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    const char = currentSettings.phraseChar || '*';
-    const preview = maskStringToChar(text.length > 15 ? text.substring(0, 15) + '...' : text, char);
-
-    textActionPopup = document.createElement('div');
-    textActionPopup.id = 'blurshield-text-action-popup';
-    textActionPopup.style.top = `${rect.top + window.scrollY}px`;
-    textActionPopup.style.left = `${rect.left + window.scrollX}px`;
-
-    textActionPopup.innerHTML = `
-      <button id="blurshield-blur-selection-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Mask as "${preview}"
-      </button>
-      <button class="cancel-btn" id="blurshield-cancel-selection-btn">&times;</button>
-    `;
-
-    document.body.appendChild(textActionPopup);
-
-    textActionPopup.querySelector('#blurshield-blur-selection-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      saveRule({
-        id: 'text_' + Date.now(),
-        type: 'text',
-        text: text,
-        label: `Text: "${text}"`,
-        createdAt: Date.now()
-      });
-      removeTextActionPopup();
-      window.getSelection()?.removeAllRanges();
-    });
-
-    textActionPopup.querySelector('#blurshield-cancel-selection-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      removeTextActionPopup();
-    });
-  }
+  }, true);
 
   function removeTextActionPopup() {
     if (textActionPopup && textActionPopup.parentNode) {
@@ -696,6 +646,45 @@
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.action) {
+      case 'MASK_SELECTION_TEXT': {
+        const textToMask = (message.text || window.getSelection()?.toString() || '').trim();
+        if (textToMask) {
+          const displayLabel = textToMask.length > 28
+            ? `Text: "${textToMask.substring(0, 25)}..."`
+            : `Text: "${textToMask}"`;
+          saveRule({
+            id: 'text_' + Date.now(),
+            type: 'text',
+            text: textToMask,
+            label: displayLabel,
+            createdAt: Date.now()
+          });
+          window.getSelection()?.removeAllRanges();
+          removeTextActionPopup();
+        }
+        sendResponse({ success: true });
+        break;
+      }
+
+      case 'BLUR_CLICKED_ELEMENT': {
+        if (lastContextMenuTarget && !isExtensionElement(lastContextMenuTarget)) {
+          const selector = generateSelector(lastContextMenuTarget);
+          const label = getElementFriendlyName(lastContextMenuTarget);
+          if (selector) {
+            saveRule({
+              id: 'elem_' + Date.now(),
+              type: 'element',
+              selector: selector,
+              label: label,
+              createdAt: Date.now()
+            });
+            lastContextMenuTarget.classList.add('blurshield-masked-element');
+          }
+        }
+        sendResponse({ success: true });
+        break;
+      }
+
       case 'TOGGLE_PICKER':
         if (isPickerActive) stopElementPicker();
         else startElementPicker();

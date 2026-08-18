@@ -1,7 +1,24 @@
 // BlurShield Background Service Worker (Manifest V3)
 
-// Initialize default settings upon extension install
+function setupContextMenus() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'blurshield-mask-selection',
+      title: 'Mask Selected Text with BlurShield',
+      contexts: ['selection']
+    });
+
+    chrome.contextMenus.create({
+      id: 'blurshield-blur-element',
+      title: 'Blur This Element with BlurShield',
+      contexts: ['page', 'image', 'link', 'video', 'audio']
+    });
+  });
+}
+
+// Initialize default settings and context menus upon extension install
 chrome.runtime.onInstalled.addListener(() => {
+  setupContextMenus();
   chrome.storage.local.get(['blurshield_settings', 'blurshield_rules'], (result) => {
     if (!result.blurshield_settings) {
       chrome.storage.local.set({
@@ -17,6 +34,28 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.local.set({ blurshield_rules: {} });
     }
   });
+});
+
+// Re-register context menus on service worker startup
+chrome.runtime.onStartup.addListener(() => {
+  setupContextMenus();
+});
+
+// Handle Context Menu clicks
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab || !tab.id) return;
+
+  if (info.menuItemId === 'blurshield-mask-selection') {
+    const selectedText = (info.selectionText || '').trim();
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'MASK_SELECTION_TEXT',
+      text: selectedText
+    }).catch(() => {});
+  } else if (info.menuItemId === 'blurshield-blur-element') {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'BLUR_CLICKED_ELEMENT'
+    }).catch(() => {});
+  }
 });
 
 // Update badge count or state on active tab change
