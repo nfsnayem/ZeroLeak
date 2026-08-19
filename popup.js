@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Element Blur slider
     blurSlider.value = currentSettings.blurIntensity || 8;
-    blurValText.textContent = `${blurSlider.value}px`;
+    blurValText.textContent = `(${blurSlider.value}px)`;
     updateSliderFill(blurSlider.value);
 
     // Phrase Mask Character Presets
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Blur Intensity Slider (Live dragging)
   blurSlider.addEventListener('input', (e) => {
     const val = parseInt(e.target.value, 10);
-    blurValText.textContent = `${val}px`;
+    blurValText.textContent = `(${val}px)`;
     updateSliderFill(val);
     currentSettings.blurIntensity = val;
     saveSettings();

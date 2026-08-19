@@ -522,6 +522,12 @@ input:checked + .slider:before {
   gap: 2px;
 }
 
+.setting-label-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .setting-label {
   font-size: 14px;
   font-weight: 600;
