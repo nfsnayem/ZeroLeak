@@ -62,8 +62,9 @@
     `;
 
     if (settings.hoverReveal) {
+      const hoverSelectors = elementRules.map(r => `${r.selector}:hover`).join(',\n');
       cssText += `
-        ${selectors}:hover {
+        ${hoverSelectors} {
           filter: none !important;
         }
       `;
@@ -99,6 +100,11 @@
       currentRules = allRules[currentHost] || [];
 
       injectPrePaintStyles(currentRules, currentSettings);
+
+      document.documentElement.setAttribute(
+        'data-blurshield-hover-reveal',
+        (currentSettings.masterEnabled && currentSettings.hoverReveal) ? 'true' : 'false'
+      );
 
       document.documentElement.style.setProperty(
         '--blurshield-amount',
@@ -139,6 +145,11 @@
       return;
     }
 
+    document.documentElement.setAttribute(
+      'data-blurshield-hover-reveal',
+      currentSettings.hoverReveal ? 'true' : 'false'
+    );
+
     injectPrePaintStyles(currentRules, currentSettings);
 
     const char = currentSettings.phraseChar || '*';
@@ -173,7 +184,7 @@
     );
 
     document.querySelectorAll('.blurshield-text-phrase').forEach((span) => {
-      const originalText = span.getAttribute('data-original-text') || span.textContent || '';
+      const originalText = span.getAttribute('data-original-text') || span.getAttribute('data-masked-text') || span.textContent || '';
       // If the text rule was deleted, restore the original text node immediately
       if (!activeTextPhrases.has(originalText.trim().toLowerCase())) {
         const parent = span.parentNode;
@@ -184,14 +195,12 @@
       } else {
         if (currentSettings.hoverReveal) {
           span.classList.add('blurshield-hover-reveal');
-          span.onmouseenter = () => { span.textContent = span.getAttribute('data-original-text'); };
-          span.onmouseleave = () => { span.textContent = maskStringToChar(span.getAttribute('data-original-text'), char); };
         } else {
           span.classList.remove('blurshield-hover-reveal');
-          span.onmouseenter = null;
-          span.onmouseleave = null;
         }
-        span.textContent = maskStringToChar(originalText, char);
+        span.setAttribute('data-original-text', originalText);
+        span.setAttribute('data-masked-text', maskStringToChar(originalText, char));
+        span.textContent = '';
       }
     });
 
@@ -222,6 +231,7 @@
   }
 
   function removeAllMasks() {
+    document.documentElement.removeAttribute('data-blurshield-hover-reveal');
     document.querySelectorAll('.blurshield-masked-element').forEach((el) => {
       el.classList.remove('blurshield-masked-element', 'blurshield-hover-reveal');
     });
@@ -229,7 +239,7 @@
     document.querySelectorAll('.blurshield-text-phrase').forEach((mark) => {
       const parent = mark.parentNode;
       if (parent) {
-        const original = mark.getAttribute('data-original-text') || mark.textContent || '';
+        const original = mark.getAttribute('data-original-text') || mark.getAttribute('data-masked-text') || mark.textContent || '';
         parent.replaceChild(document.createTextNode(original), mark);
         parent.normalize();
       }
@@ -293,12 +303,8 @@
         const span = document.createElement('span');
         span.className = `blurshield-text-phrase ${hoverClass}`.trim();
         span.setAttribute('data-original-text', match[0]);
-        span.textContent = maskStringToChar(match[0], char);
-
-        if (currentSettings.hoverReveal) {
-          span.onmouseenter = () => { span.textContent = span.getAttribute('data-original-text'); };
-          span.onmouseleave = () => { span.textContent = maskStringToChar(span.getAttribute('data-original-text'), char); };
-        }
+        span.setAttribute('data-masked-text', maskStringToChar(match[0], char));
+        span.textContent = '';
 
         fragments.appendChild(span);
         lastIndex = regex.lastIndex;
@@ -373,13 +379,21 @@
           try {
             if (node.matches && node.matches(rule.selector)) {
               node.classList.add('blurshield-masked-element');
-              if (hoverClass) node.classList.add(hoverClass);
+              if (hoverClass) {
+                node.classList.add(hoverClass);
+              } else {
+                node.classList.remove('blurshield-hover-reveal');
+              }
             }
             if (node.querySelectorAll) {
               node.querySelectorAll(rule.selector).forEach(el => {
                 if (!isExtensionElement(el)) {
                   el.classList.add('blurshield-masked-element');
-                  if (hoverClass) el.classList.add(hoverClass);
+                  if (hoverClass) {
+                    el.classList.add(hoverClass);
+                  } else {
+                    el.classList.remove('blurshield-hover-reveal');
+                  }
                 }
               });
             }
@@ -715,6 +729,8 @@
     target.classList.add('blurshield-masked-element');
     if (currentSettings.hoverReveal) {
       target.classList.add('blurshield-hover-reveal');
+    } else {
+      target.classList.remove('blurshield-hover-reveal');
     }
     stopElementPicker();
   }
@@ -1048,6 +1064,8 @@
             target.classList.add('blurshield-masked-element');
             if (currentSettings.hoverReveal) {
               target.classList.add('blurshield-hover-reveal');
+            } else {
+              target.classList.remove('blurshield-hover-reveal');
             }
           }
         } else {
@@ -1252,36 +1270,7 @@
   });
 
   // =========================================================================
-  // 11. Delegated Hover-To-Reveal Handler for Phrases
-  // =========================================================================
-
-  document.addEventListener('mouseover', (e) => {
-    if (!currentSettings.masterEnabled || !currentSettings.hoverReveal) return;
-    const phraseSpan = e.target && e.target.closest ? e.target.closest('.blurshield-text-phrase') : null;
-    if (phraseSpan) {
-      const orig = phraseSpan.getAttribute('data-original-text');
-      if (orig && phraseSpan.textContent !== orig) {
-        phraseSpan.textContent = orig;
-      }
-    }
-  }, true);
-
-  document.addEventListener('mouseout', (e) => {
-    if (!currentSettings.masterEnabled) return;
-    const phraseSpan = e.target && e.target.closest ? e.target.closest('.blurshield-text-phrase') : null;
-    if (phraseSpan) {
-      if (e.relatedTarget && phraseSpan.contains(e.relatedTarget)) return;
-      const orig = phraseSpan.getAttribute('data-original-text');
-      const char = currentSettings.phraseChar || '*';
-      const masked = maskStringToChar(orig, char);
-      if (orig && phraseSpan.textContent !== masked) {
-        phraseSpan.textContent = masked;
-      }
-    }
-  }, true);
-
-  // =========================================================================
-  // 12. Bootstrap
+  // 11. Bootstrap
   // =========================================================================
 
   loadAndApply();

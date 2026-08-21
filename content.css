@@ -27,15 +27,29 @@
   box-shadow: none !important;
   padding: 0 !important;
   user-select: none !important;
-  transition: all 0.15s ease !important;
+  transition: color 0.15s ease, letter-spacing 0.15s ease !important;
 }
 
-/* Hover-to-reveal mode */
-.blurshield-hover-reveal.blurshield-masked-element:hover {
+.blurshield-text-phrase::before {
+  content: attr(data-masked-text) !important;
+  font-family: inherit !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  letter-spacing: inherit !important;
+}
+
+/* Hover-to-reveal mode: Active ONLY when Hover to Reveal is enabled */
+[data-blurshield-hover-reveal="true"] .blurshield-masked-element:hover {
   filter: none !important;
 }
 
-.blurshield-hover-reveal.blurshield-text-phrase:hover {
+[data-blurshield-hover-reveal="true"] .blurshield-text-phrase:hover::before {
+  content: attr(data-original-text) !important;
+  letter-spacing: normal !important;
+  font-weight: inherit !important;
+}
+
+[data-blurshield-hover-reveal="true"] .blurshield-text-phrase:hover {
   color: inherit !important;
   letter-spacing: normal !important;
   font-weight: inherit !important;
