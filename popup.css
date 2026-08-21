@@ -41,6 +41,14 @@ body {
   overflow-y: auto;
 }
 
+/* Disable initial render transitions to prevent toggle flickers / sliding on open */
+body.preload *,
+body.preload *:before,
+body.preload *:after {
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Custom Scrollbar */
 body::-webkit-scrollbar, .rules-list::-webkit-scrollbar {
   width: 6px;
@@ -186,16 +194,10 @@ body::-webkit-scrollbar-thumb:hover, .rules-list::-webkit-scrollbar-thumb:hover 
   display: none;
   flex-direction: column;
   gap: 14px;
-  animation: blurshield-tab-fade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tab-panel.active {
   display: flex;
-}
-
-@keyframes blurshield-tab-fade {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Master Power Switch Card */
@@ -311,6 +313,20 @@ input:checked + .slider:before {
 }
 
 /* Control Section Cards (Element Masking & Phrase Masking) */
+#tab-controls.controls-disabled {
+  opacity: 0.42 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.5) !important;
+  user-select: none;
+  cursor: not-allowed;
+  animation: none !important;
+  transition: none !important;
+}
+
+#tab-controls.controls-disabled * {
+  cursor: not-allowed !important;
+}
+
 .control-section-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

@@ -184,8 +184,12 @@
       } else {
         if (currentSettings.hoverReveal) {
           span.classList.add('blurshield-hover-reveal');
+          span.onmouseenter = () => { span.textContent = span.getAttribute('data-original-text'); };
+          span.onmouseleave = () => { span.textContent = maskStringToChar(span.getAttribute('data-original-text'), char); };
         } else {
           span.classList.remove('blurshield-hover-reveal');
+          span.onmouseenter = null;
+          span.onmouseleave = null;
         }
         span.textContent = maskStringToChar(originalText, char);
       }
@@ -700,18 +704,51 @@
       selector: selector,
       label: label,
       createdAt: Date.now()
+    }, (saved) => {
+      if (saved) {
+        showToast(`Blurred: ${label}`);
+      } else {
+        showToast(`Element already blurred`, 'info');
+      }
     });
 
     target.classList.add('blurshield-masked-element');
+    if (currentSettings.hoverReveal) {
+      target.classList.add('blurshield-hover-reveal');
+    }
     stopElementPicker();
   }
 
   function onPickerKeyDown(e) {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' || e.key === 'Esc') {
       stopElementPicker();
       removeTextActionPopup();
     }
   }
+
+  // =========================================================================
+  // Global In-Page Shortcut Listener for Alt+Shift+B (Instant DOM Trigger)
+  // =========================================================================
+
+  window.addEventListener('keydown', (e) => {
+    // Check for Alt+Shift+B across all keyboard layouts and platforms
+    if (e.altKey && e.shiftKey && (e.code === 'KeyB' || e.key === 'B' || e.key === 'b')) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!currentSettings.masterEnabled) {
+        showToast('BlurShield is currently paused', 'warning');
+        return;
+      }
+
+      if (isPickerActive) {
+        stopElementPicker();
+      } else {
+        startElementPicker();
+        showToast('🎯 Element Picker active: Click any element (Esc to exit)', 'info', 2200);
+      }
+    }
+  }, true);
 
   function isExtensionElement(element) {
     if (!element) return false;
@@ -719,15 +756,69 @@
       element.id?.startsWith('blurshield-') ||
       element.closest?.('#blurshield-picker-banner') ||
       element.closest?.('#blurshield-hover-box') ||
-      element.closest?.('#blurshield-text-action-popup')
+      element.closest?.('#blurshield-text-action-popup') ||
+      element.closest?.('#blurshield-toast-container')
     );
   }
 
   // =========================================================================
-  // 8. Context Menu Target Tracking & Quick Actions
+  // 8. In-Page Modern Glassmorphic Toast Notifications
+  // =========================================================================
+
+  function showToast(message, type = 'success', duration = 2400) {
+    let container = document.getElementById('blurshield-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'blurshield-toast-container';
+      (document.body || document.documentElement).appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `blurshield-toast blurshield-toast-${type}`;
+
+    let iconSvg = '';
+    if (type === 'success') {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    } else if (type === 'warning') {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+    } else {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+    }
+
+    toast.innerHTML = `
+      <div class="blurshield-toast-icon">${iconSvg}</div>
+      <div class="blurshield-toast-message">${escapeHtml(message)}</div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('blurshield-toast-exit');
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+        if (container.children.length === 0 && container.parentNode) {
+          container.parentNode.removeChild(container);
+        }
+      }, 250);
+    }, duration);
+  }
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // =========================================================================
+  // 9. Context Menu Target Tracking & Production Handlers
   // =========================================================================
 
   let lastContextMenuTarget = null;
+  let lastContextMenuCoords = { x: 0, y: 0 };
 
   // Find whether an element is currently masked by an element rule or phrase rule
   function findMaskedRuleForElement(el) {
@@ -741,7 +832,7 @@
         const found = currentRules.find(r => r.id === ruleId);
         if (found) return found;
       }
-      return { type: 'element', element: maskedContainer };
+      return { type: 'element', element: maskedContainer, label: 'Masked Element' };
     }
 
     // 2. Text phrase span
@@ -750,7 +841,7 @@
       const orig = (textSpan.getAttribute('data-original-text') || textSpan.textContent || '').trim().toLowerCase();
       const found = currentRules.find(r => r.type === 'text' && r.text && r.text.trim().toLowerCase() === orig);
       if (found) return found;
-      return { type: 'text', text: orig };
+      return { type: 'text', text: orig, label: `Text: "${orig.substring(0, 20)}"` };
     }
 
     // 3. Match against active selector rules
@@ -767,9 +858,12 @@
     return null;
   }
 
-  // Remove/unblur rule(s) matching an element or text
+  // Remove/unblur rule(s) matching an element or text with user feedback
   function removeRulesForElement(targetEl) {
-    if (!targetEl || isExtensionElement(targetEl)) return;
+    if (!targetEl || isExtensionElement(targetEl)) {
+      showToast('No active blur found on this element', 'info');
+      return;
+    }
 
     const maskedContainer = targetEl.closest ? targetEl.closest('.blurshield-masked-element, [data-blurshield-id]') : null;
     const ruleId = maskedContainer ? maskedContainer.getAttribute('data-blurshield-id') : null;
@@ -782,12 +876,21 @@
       const hostRules = allRules[currentHost] || [];
 
       const initialCount = hostRules.length;
+      let removedRuleLabel = '';
+
       const updatedRules = hostRules.filter(rule => {
-        if (ruleId && rule.id === ruleId) return false;
-        if (textOriginal && rule.type === 'text' && rule.text && rule.text.trim().toLowerCase() === textOriginal) return false;
+        if (ruleId && rule.id === ruleId) {
+          removedRuleLabel = rule.label || 'Element Blur';
+          return false;
+        }
+        if (textOriginal && rule.type === 'text' && rule.text && rule.text.trim().toLowerCase() === textOriginal) {
+          removedRuleLabel = rule.label || `Text: "${rule.text.substring(0, 20)}"`;
+          return false;
+        }
         if (rule.type === 'element' && rule.selector) {
           try {
             if (targetEl.matches(rule.selector) || (targetEl.closest && targetEl.closest(rule.selector))) {
+              removedRuleLabel = rule.label || 'Element Blur';
               return false;
             }
           } catch (e) {}
@@ -801,28 +904,56 @@
           currentRules = updatedRules;
           applyAllRules();
           notifyBadgeCount();
+          showToast(`Unblurred: ${removedRuleLabel || 'Target item'}`);
         });
       } else if (maskedContainer) {
         // Fallback: If it had the class directly applied
         maskedContainer.classList.remove('blurshield-masked-element', 'blurshield-hover-reveal');
         maskedContainer.removeAttribute('data-blurshield-id');
         maskedContainer.style.filter = '';
+        showToast('Blur removed from element');
+      } else {
+        showToast('No active blur found on this element', 'info');
       }
     });
   }
 
-  // Track the element that was right-clicked for context menu actions & update context menu title
+  // Find media element under right-clicked point or ancestor
+  function resolveMediaTarget(targetEl, coords, srcUrl) {
+    if (targetEl) {
+      if (['img', 'video', 'svg', 'canvas', 'picture', 'audio', 'iframe'].includes(targetEl.tagName.toLowerCase())) {
+        return targetEl;
+      }
+      const childMedia = targetEl.querySelector('img, video, svg, canvas, picture');
+      if (childMedia) return childMedia;
+      const parentMedia = targetEl.closest('img, video, svg, canvas, picture, [style*="background-image"]');
+      if (parentMedia) return parentMedia;
+    }
+
+    if (coords && (coords.x || coords.y)) {
+      const elAtPoint = document.elementFromPoint(coords.x, coords.y);
+      if (elAtPoint) {
+        const media = elAtPoint.closest('img, video, svg, canvas, picture') || elAtPoint.querySelector('img, video, svg, canvas, picture');
+        if (media) return media;
+      }
+    }
+
+    if (srcUrl) {
+      try {
+        const cleanUrl = srcUrl.split('?')[0];
+        const match = document.querySelector(`img[src*="${CSS.escape(cleanUrl)}"], video[src*="${CSS.escape(cleanUrl)}"]`);
+        if (match) return match;
+      } catch (e) {}
+    }
+
+    return targetEl;
+  }
+
+  // Track the element and coordinates that were right-clicked
   document.addEventListener('contextmenu', (e) => {
     if (!isExtensionElement(e.target)) {
       lastContextMenuTarget = e.target;
-      if (currentSettings.masterEnabled) {
-        const maskedRule = findMaskedRuleForElement(e.target);
-        chrome.runtime.sendMessage({
-          action: 'UPDATE_CONTEXT_MENU_TARGET',
-          isMasked: !!maskedRule,
-          maskType: maskedRule ? maskedRule.type : null
-        }).catch(() => {});
-      }
+      lastContextMenuCoords = { x: e.clientX, y: e.clientY };
     }
   }, true);
 
@@ -834,10 +965,10 @@
   }
 
   // =========================================================================
-  // 9. Save & Delete Rules
+  // 10. Save & Delete Rules
   // =========================================================================
 
-  function saveRule(newRule) {
+  function saveRule(newRule, onComplete) {
     chrome.storage.local.get(['blurshield_rules'], (result) => {
       const allRules = result.blurshield_rules || {};
       if (!allRules[currentHost]) allRules[currentHost] = [];
@@ -853,13 +984,16 @@
           currentRules = allRules[currentHost];
           applyAllRules();
           notifyBadgeCount();
+          if (onComplete) onComplete(true);
         });
+      } else {
+        if (onComplete) onComplete(false);
       }
     });
   }
 
   // =========================================================================
-  // 10. Runtime Communication & Listeners
+  // 11. Runtime Communication & Context Menu Listeners
   // =========================================================================
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -876,48 +1010,205 @@
             text: textToMask,
             label: displayLabel,
             createdAt: Date.now()
+          }, (saved) => {
+            if (saved) {
+              showToast(`Masked: "${textToMask.length > 20 ? textToMask.substring(0, 18) + '...' : textToMask}"`);
+            } else {
+              showToast(`Phrase is already masked`, 'info');
+            }
           });
           window.getSelection()?.removeAllRanges();
           removeTextActionPopup();
+        } else {
+          showToast('Highlight text before selecting Mask Text', 'warning');
         }
         sendResponse({ success: true });
         break;
       }
 
       case 'BLUR_CLICKED_ELEMENT': {
-        if (lastContextMenuTarget && !isExtensionElement(lastContextMenuTarget)) {
-          const maskedRule = findMaskedRuleForElement(lastContextMenuTarget);
-          if (maskedRule) {
-            // Already masked! Unblur/remove mask instead of duplicating or stacking another blur
-            removeRulesForElement(lastContextMenuTarget);
-          } else {
-            // Not masked yet: generate selector and save blur rule
-            const selector = generateSelector(lastContextMenuTarget);
-            const label = getElementFriendlyName(lastContextMenuTarget);
-            if (selector) {
-              saveRule({
-                id: 'elem_' + Date.now(),
-                type: 'element',
-                selector: selector,
-                label: label,
-                createdAt: Date.now()
-              });
-              lastContextMenuTarget.classList.add('blurshield-masked-element');
+        const target = lastContextMenuTarget || (lastContextMenuCoords.x ? document.elementFromPoint(lastContextMenuCoords.x, lastContextMenuCoords.y) : null);
+        if (target && !isExtensionElement(target)) {
+          const selector = generateSelector(target);
+          const label = getElementFriendlyName(target);
+          if (selector) {
+            saveRule({
+              id: 'elem_' + Date.now(),
+              type: 'element',
+              selector: selector,
+              label: label,
+              createdAt: Date.now()
+            }, (saved) => {
+              if (saved) {
+                showToast(`Blurred: ${label}`);
+              } else {
+                showToast(`Element already blurred`, 'info');
+              }
+            });
+            target.classList.add('blurshield-masked-element');
+            if (currentSettings.hoverReveal) {
+              target.classList.add('blurshield-hover-reveal');
             }
           }
+        } else {
+          showToast('Unable to detect target element', 'warning');
         }
         sendResponse({ success: true });
         break;
       }
 
+      case 'UNBLUR_CLICKED_ELEMENT': {
+        const target = lastContextMenuTarget || (lastContextMenuCoords.x ? document.elementFromPoint(lastContextMenuCoords.x, lastContextMenuCoords.y) : null);
+        if (target && !isExtensionElement(target)) {
+          removeRulesForElement(target);
+        } else {
+          showToast('No active blur found on this element', 'info');
+        }
+        sendResponse({ success: true });
+        break;
+      }
+
+      case 'UNMASK_SELECTION_TEXT': {
+        const selectedText = (message.text || window.getSelection()?.toString() || '').trim();
+        const target = lastContextMenuTarget || (lastContextMenuCoords.x ? document.elementFromPoint(lastContextMenuCoords.x, lastContextMenuCoords.y) : null);
+        
+        let textToUnmask = selectedText;
+        if (!textToUnmask && target) {
+          const phraseSpan = target.closest ? target.closest('.blurshield-text-phrase') : null;
+          if (phraseSpan) {
+            textToUnmask = (phraseSpan.getAttribute('data-original-text') || phraseSpan.textContent || '').trim();
+          }
+        }
+
+        if (textToUnmask) {
+          const targetLower = textToUnmask.toLowerCase();
+          chrome.storage.local.get(['blurshield_rules'], (result) => {
+            const allRules = result.blurshield_rules || {};
+            const hostRules = allRules[currentHost] || [];
+            const initialCount = hostRules.length;
+
+            const updatedRules = hostRules.filter(rule => {
+              if (rule.type === 'text' && rule.text && rule.text.trim().toLowerCase() === targetLower) {
+                return false;
+              }
+              return true;
+            });
+
+            if (updatedRules.length < initialCount) {
+              allRules[currentHost] = updatedRules;
+              chrome.storage.local.set({ blurshield_rules: allRules }, () => {
+                currentRules = updatedRules;
+                applyAllRules();
+                notifyBadgeCount();
+                showToast(`Unmasked: "${textToUnmask.length > 20 ? textToUnmask.substring(0, 18) + '...' : textToUnmask}"`);
+              });
+            } else {
+              showToast(`No masked rule found for "${textToUnmask.substring(0, 18)}"`, 'info');
+            }
+          });
+        } else {
+          showToast('Highlight text or right-click masked text to unmask', 'info');
+        }
+        sendResponse({ success: true });
+        break;
+      }
+
+      case 'BLUR_ALL_SENSITIVE': {
+        // Scan for email addresses on current page
+        const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+        const pageText = document.body ? document.body.innerText : '';
+        const matches = Array.from(new Set(pageText.match(emailRegex) || [])).slice(0, 15);
+
+        if (matches.length > 0) {
+          chrome.storage.local.get(['blurshield_rules'], (result) => {
+            const allRules = result.blurshield_rules || {};
+            if (!allRules[currentHost]) allRules[currentHost] = [];
+
+            let addedCount = 0;
+            matches.forEach((email) => {
+              const exists = allRules[currentHost].some(r => r.type === 'text' && r.text.toLowerCase() === email.toLowerCase());
+              if (!exists) {
+                allRules[currentHost].push({
+                  id: 'text_' + Math.random().toString(36).substr(2, 9),
+                  type: 'text',
+                  text: email,
+                  label: `Email: ${email.substring(0, 18)}...`,
+                  createdAt: Date.now()
+                });
+                addedCount++;
+              }
+            });
+
+            if (addedCount > 0) {
+              chrome.storage.local.set({ blurshield_rules: allRules }, () => {
+                currentRules = allRules[currentHost];
+                applyAllRules();
+                notifyBadgeCount();
+                showToast(`Masked ${addedCount} email(s) on this page`);
+              });
+            } else {
+              showToast(`All detected emails are already masked`, 'info');
+            }
+          });
+        } else {
+          showToast(`No unmasked email addresses detected on this page`, 'info');
+        }
+        sendResponse({ success: true });
+        break;
+      }
+
+      case 'CLEAR_SITE_RULES': {
+        chrome.storage.local.get(['blurshield_rules'], (result) => {
+          const allRules = result.blurshield_rules || {};
+          const count = (allRules[currentHost] || []).length;
+          allRules[currentHost] = [];
+
+          chrome.storage.local.set({ blurshield_rules: allRules }, () => {
+            currentRules = [];
+            removeAllMasks();
+            removePrePaintStyles();
+            notifyBadgeCount();
+            showToast(`Cleared ${count} blur rule(s) for this site`);
+          });
+        });
+        sendResponse({ success: true });
+        break;
+      }
+
+      case 'MASTER_TOGGLED': {
+        currentSettings.masterEnabled = !!message.masterEnabled;
+        loadAndApply();
+        showToast(
+          currentSettings.masterEnabled ? '🛡️ BlurShield Resumed' : '⏸️ BlurShield Paused',
+          currentSettings.masterEnabled ? 'success' : 'info'
+        );
+        sendResponse({ success: true });
+        break;
+      }
+
       case 'TOGGLE_PICKER':
-        if (isPickerActive) stopElementPicker();
-        else startElementPicker();
+        if (!currentSettings.masterEnabled) {
+          showToast('BlurShield is currently paused', 'warning');
+          sendResponse({ isPickerActive: false, error: 'MASTER_DISABLED' });
+          break;
+        }
+        if (isPickerActive) {
+          stopElementPicker();
+        } else {
+          startElementPicker();
+          showToast('🎯 Element Picker active: Click any element', 'info', 2000);
+        }
         sendResponse({ isPickerActive });
         break;
 
       case 'START_PICKER':
+        if (!currentSettings.masterEnabled) {
+          showToast('BlurShield is currently paused', 'warning');
+          sendResponse({ success: false, error: 'MASTER_DISABLED' });
+          break;
+        }
         startElementPicker();
+        showToast('🎯 Element Picker active: Click any element', 'info', 2000);
         sendResponse({ success: true });
         break;
 
@@ -969,7 +1260,9 @@
     const phraseSpan = e.target && e.target.closest ? e.target.closest('.blurshield-text-phrase') : null;
     if (phraseSpan) {
       const orig = phraseSpan.getAttribute('data-original-text');
-      if (orig) phraseSpan.textContent = orig;
+      if (orig && phraseSpan.textContent !== orig) {
+        phraseSpan.textContent = orig;
+      }
     }
   }, true);
 
@@ -977,9 +1270,13 @@
     if (!currentSettings.masterEnabled) return;
     const phraseSpan = e.target && e.target.closest ? e.target.closest('.blurshield-text-phrase') : null;
     if (phraseSpan) {
+      if (e.relatedTarget && phraseSpan.contains(e.relatedTarget)) return;
       const orig = phraseSpan.getAttribute('data-original-text');
       const char = currentSettings.phraseChar || '*';
-      if (orig) phraseSpan.textContent = maskStringToChar(orig, char);
+      const masked = maskStringToChar(orig, char);
+      if (orig && phraseSpan.textContent !== masked) {
+        phraseSpan.textContent = masked;
+      }
     }
   }, true);
 

@@ -114,6 +114,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       renderSettingsUI();
       renderRulesUI();
+
+      // Remove preload class cleanly on next frame so subsequent user clicks animate smoothly,
+      // but initial render / storage loading is instant with zero toggle sliding
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          document.body.classList.remove('preload');
+        }, 50);
+      });
     });
   }
 
@@ -137,6 +145,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         powerCard.classList.add('disabled');
       }
+    }
+
+    // Toggle controls disabled state in Tab 1
+    const tabControls = document.getElementById('tab-controls');
+    if (tabControls) {
+      if (currentSettings.masterEnabled) {
+        tabControls.classList.remove('controls-disabled');
+      } else {
+        tabControls.classList.add('controls-disabled');
+      }
+      const interactiveElements = tabControls.querySelectorAll('input, button');
+      interactiveElements.forEach((el) => {
+        el.disabled = !currentSettings.masterEnabled;
+      });
     }
 
     // Element Blur slider
@@ -318,6 +340,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Pick Element Button
   btnPickElement.addEventListener('click', async () => {
+    if (!currentSettings.masterEnabled) return;
     if (!activeTab || !activeTab.id) return;
     chrome.tabs.sendMessage(activeTab.id, { action: 'START_PICKER' }, () => {
       if (chrome.runtime.lastError) {
@@ -329,6 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Toggle Text Panel
   btnQuickTextToggle.addEventListener('click', () => {
+    if (!currentSettings.masterEnabled) return;
     const isHidden = textMaskPanel.style.display === 'none';
     textMaskPanel.style.display = isHidden ? 'block' : 'none';
     if (isHidden) {
@@ -338,6 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add Text Mask Button
   btnAddTextMask.addEventListener('click', () => {
+    if (!currentSettings.masterEnabled) return;
     const text = manualTextInput.value.trim();
     if (!text) return;
 
@@ -362,6 +387,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   manualTextInput.addEventListener('keydown', (e) => {
+    if (!currentSettings.masterEnabled) return;
     if (e.key === 'Enter') {
       btnAddTextMask.click();
     }
@@ -377,6 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Blur Intensity Slider (Live dragging)
   blurSlider.addEventListener('input', (e) => {
+    if (!currentSettings.masterEnabled) return;
     const val = parseInt(e.target.value, 10);
     blurValText.textContent = `(${val}px)`;
     updateSliderFill(val);
@@ -385,12 +412,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   blurSlider.addEventListener('change', () => {
+    if (!currentSettings.masterEnabled) return;
     saveSettings();
   });
 
   // Phrase Mask Character Presets (*, #, $, •, X)
   charBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (!currentSettings.masterEnabled) return;
       const char = btn.getAttribute('data-char');
       currentSettings.phraseChar = char;
       saveSettings();
@@ -399,6 +428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Custom Character Input
   customCharInput.addEventListener('input', (e) => {
+    if (!currentSettings.masterEnabled) return;
     const char = e.target.value.trim();
     if (char) {
       currentSettings.phraseChar = char.charAt(0);
@@ -409,6 +439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Phrase Character Color Presets
   phraseColorDots.forEach((dot) => {
     dot.addEventListener('click', () => {
+      if (!currentSettings.masterEnabled) return;
       const color = dot.getAttribute('data-color');
       currentSettings.phraseColor = color;
       saveSettings();
@@ -417,6 +448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Phrase Character Color Picker (Native <input type="color"> handles open on click)
   phraseColorPicker.addEventListener('input', (e) => {
+    if (!currentSettings.masterEnabled) return;
     const val = e.target.value;
     currentSettings.phraseColor = val;
     phraseColorPickerLabel.style.background = val;
@@ -426,6 +458,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   phraseColorPicker.addEventListener('change', (e) => {
+    if (!currentSettings.masterEnabled) return;
     const val = e.target.value;
     currentSettings.phraseColor = val;
     phraseColorPickerLabel.style.background = val;
@@ -436,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Hover to reveal
   hoverRevealSwitch.addEventListener('change', (e) => {
+    if (!currentSettings.masterEnabled) return;
     currentSettings.hoverReveal = e.target.checked;
     saveSettings();
   });

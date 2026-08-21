@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
-<body>
+<body class="preload">
   <div class="app-container">
     <!-- HEADER -->
     <header class="popup-header">
@@ -21,7 +21,7 @@
         </div>
         <div class="logo-text">
           <h1>BlurShield</h1>
-          <span class="version-tag">v1.0</span>
+          <span class="version-tag">FREE</span>
         </div>
       </div>
       <div class="header-power-group" id="power-card">
@@ -155,7 +155,7 @@
         <div class="setting-row">
           <div class="setting-label-group">
             <span class="setting-label">Hover to Reveal</span>
-            <span class="setting-subtext">Temporarily unmask on mouse hover</span>
+            <span class="setting-subtext">Reveal masked content while hovering</span>
           </div>
           <label class="switch-sm">
             <input type="checkbox" id="hover-reveal-switch">
@@ -191,7 +191,7 @@
           </div>
           <div class="tool-content">
             <h4>Support Project</h4>
-            <p>Help keep BlurShield free and maintained</p>
+            <p>Help keep BlurShield free and running</p>
           </div>
           <button class="btn-tool-action btn-donate-action" id="btn-donate">Donate</button>
         </div>
@@ -206,8 +206,8 @@
             </svg>
           </div>
           <div class="tool-content">
-            <h4>Export Rules</h4>
-            <p>Backup all domain blur rules as a JSON file</p>
+            <h4>Backup Rules</h4>
+            <p>Save all website blur rules as a JSON file</p>
           </div>
           <button class="btn-tool-action" id="btn-export-rules">Export</button>
         </div>
@@ -222,8 +222,8 @@
             </svg>
           </div>
           <div class="tool-content">
-            <h4>Import Rules</h4>
-            <p>Restore or load saved rules from JSON</p>
+            <h4>Restore Rules</h4>
+            <p>Load and apply saved rules from a JSON file</p>
           </div>
           <button class="btn-tool-action" id="btn-import-rules">Import</button>
         </div>

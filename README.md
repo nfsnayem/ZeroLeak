@@ -36,13 +36,24 @@
   - Includes manual color swatches (White, Black) and an interactive **Color Picker**.
 
 ### 👁️ 3. Real-Time Hover-to-Reveal
-- Temporarily unmasks blurred elements and reveals masked text phrases when hovering with the cursor.
+- Reveal masked content while hovering with the cursor.
 - Instant live switching without requiring a page refresh.
 
 ### ⚡ 4. Zero-FOUC Architecture
 - Uses `run_at: document_start` pre-paint style injection. Target elements and phrases are blurred before the browser paints the initial frame, preventing data leakage during screen recordings.
 
-### 📋 5. Site Rules & Backup Management
+### 🖱️ 5. Clean, Production-Grade Context Menus
+- **Intuitive Right-Click Actions**:
+  - `Blur This Element`: Blurs the right-clicked container, card, image, or section.
+  - `Unblur This Element`: Removes active blur rule from the clicked element.
+  - `──────────────`
+  - `Mask Selected Text`: Masks highlighted words or phrases with 1-to-1 character replacement.
+  - `Unmask Selected Text`: Restores masked text phrases.
+  - `──────────────`
+  - `Select Element to Blur (Alt+Shift+B)`: Launches the interactive visual inspector.
+- **Glassmorphic In-Page Feedback**: Real-time subtle floating toasts confirm actions without breaking page flow.
+
+### 📋 6. Site Rules & Backup Management
 - **Dedicated Masks Tab**: View, locate (🔍), or delete (🗑️) active masks per domain.
 - **One-Click Clear All**: Wipe all rules for a website with confirmation and automatic page refresh.
 - **JSON Export & Import**: Backup, transfer, or restore your privacy configurations across different browsers.
