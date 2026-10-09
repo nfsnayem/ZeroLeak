@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ BlurShield
+# 🛡️ ZeroLeak
 
 **Privacy & Content Masking Extension for Google Chrome**  
 *Permanently blur, mask, and redact sensitive elements and text across page refreshes with zero flash of unstyled content (FOUC).*
@@ -16,7 +16,7 @@
 
 ## 🌟 Overview
 
-**BlurShield** is a lightweight, high-performance Chrome Extension designed for content creators, remote presenters, developers, and privacy-conscious users. It allows you to conceal sensitive client data, account numbers, private balances, names, and proprietary information on any webpage with persistent, reload-proof protection.
+**ZeroLeak** is a lightweight, high-performance Chrome Extension designed for content creators, remote presenters, developers, and privacy-conscious users. It allows you to conceal sensitive client data, account numbers, private balances, names, and proprietary information on any webpage with persistent, reload-proof protection.
 
 ---
 
@@ -88,7 +88,7 @@
 
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/your-username/blurshield.git
+   git clone https://github.com/your-username/ZeroLeak.git
    ```
 2. Open Google Chrome and navigate to:
    ```text
@@ -96,13 +96,13 @@
    ```
 3. Enable **Developer mode** in the top-right corner.
 4. Click **Load unpacked** and select the root directory of this repository.
-5. Click the **BlurShield** icon in your browser toolbar to start masking!
+5. Click the **ZeroLeak** icon in your browser toolbar to start masking!
 
 ---
 
 ## 🔒 Permissions & Security
 
-BlurShield strictly operates on your local machine and never collects, transmits, or logs any personal data:
+ZeroLeak strictly operates on your local machine and never collects, transmits, or logs any personal data:
 
 - **`storage`**: Used to save your masking rules locally using `chrome.storage.local`.
 - **`activeTab` & `scripting`**: Required to inspect elements and inject masking styles into open tabs.
@@ -112,7 +112,7 @@ BlurShield strictly operates on your local machine and never collects, transmits
 
 ## 💖 Support the Project
 
-BlurShield is free and open-source. If this tool helps protect your privacy during presentations or daily work, consider supporting development:
+ZeroLeak is free and open-source. If this tool helps protect your privacy during presentations or daily work, consider supporting development:
 
 [![Support via Stripe](https://img.shields.io/badge/Donate-Stripe-6366f1?style=for-the-badge&logo=stripe&logoColor=white)](https://donate.stripe.com/4gM6oH9MLcj4g319Mj4gg01)
 
